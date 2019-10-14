@@ -1,4 +1,8 @@
+from typing import Dict, Union, List
+
 from db import db
+
+UserJSON = Dict[str, Union[int, str]]
 
 
 class UserModel(db.Model):
@@ -12,21 +16,21 @@ class UserModel(db.Model):
         self.username = username
         self.password = password
 
-    def json(self):
+    def json(self) -> UserJSON:
         return {"id": self.id, "username": self.username}
 
     @classmethod
-    def find_by_username(cls, username):
+    def find_by_username(cls, username: str) -> List["UserModel"]:
         return cls.query.filter_by(username=username).first()
 
     @classmethod
-    def find_by_id(cls, _id):
+    def find_by_id(cls, _id: int) -> List["UserModel"]:
         return cls.query.filter_by(id=_id).first()
 
-    def save_to_db(self):
+    def save_to_db(self) -> None:
         db.session.add(self)
         db.session.commit()
 
-    def delete_from_db(self):
+    def delete_from_db(self) -> None:
         db.session.delete(self)
         db.session.commit()

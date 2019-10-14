@@ -3,7 +3,7 @@ from models.store import StoreModel
 
 
 class Store(Resource):
-    def get(self, name):
+    def get(self, name: str):
         store = StoreModel.find_by_name(name)
         if store:
             return store.json()

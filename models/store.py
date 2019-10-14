@@ -1,4 +1,9 @@
+from typing import List, Dict, Union
+
 from db import db
+from models.item import ItemJSON
+
+StoreJSON = Dict[str, Union[int, str, List[ItemJSON]]]
 
 
 class StoreModel(db.Model):
@@ -12,7 +17,7 @@ class StoreModel(db.Model):
     def __init__(self, name):
         self.name = name
 
-    def json(self):
+    def json(self) -> StoreJSON:
         return {
             "id": self.id,
             "name": self.name,
@@ -20,17 +25,17 @@ class StoreModel(db.Model):
         }
 
     @classmethod
-    def find_by_name(cls, name):
+    def find_by_name(cls, name: str) -> "StoreModel":
         return cls.query.filter_by(name=name).first()
 
     @classmethod
-    def find_all(cls):
+    def find_all(cls) -> List["StoreModel"]:
         return cls.query.all()
 
-    def save_to_db(self):
+    def save_to_db(self) -> None:
         db.session.add(self)
         db.session.commit()
 
-    def delete_from_db(self):
+    def delete_from_db(self) -> None:
         db.session.delete(self)
         db.session.commit()
