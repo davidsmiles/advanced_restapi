@@ -23,15 +23,16 @@ class Item(Resource):
         "store_id", type=int, required=True, help=BLANK_ERROR.format("store_id")
     )
 
-    @jwt_required  # No longer needs brackets
-    def get(self, name):
+    @classmethod
+    def get(cls, name):
         item = ItemModel.find_by_name(name)
         if item:
             return item.json(), 200
         return {"message": ITEM_NOT_FOUND}, 404
 
+    @classmethod
     @fresh_jwt_required
-    def post(self, name):
+    def post(cls, name):
         if ItemModel.find_by_name(name):
             return {"message": ALREADY_EXISTS.format(name)}, 400
 
@@ -46,15 +47,17 @@ class Item(Resource):
 
         return item.json(), 201
 
+    @classmethod
     @jwt_required
-    def delete(self, name):
+    def delete(cls, name):
         item = ItemModel.find_by_name(name)
         if item:
             item.delete_from_db()
             return {"message": ITEM_DELETED}, 200
         return {"message": ITEM_NOT_FOUND}, 404
 
-    def put(self, name):
+    @classmethod
+    def put(cls, name):
         data = Item.parser.parse_args()
 
         item = ItemModel.find_by_name(name)
@@ -70,5 +73,6 @@ class Item(Resource):
 
 
 class ItemList(Resource):
-    def get(self):
+    @classmethod
+    def get(cls):
         return {"items": [item.json() for item in ItemModel.find_all()]}, 200
