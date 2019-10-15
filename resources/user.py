@@ -1,4 +1,6 @@
+from flask import request
 from flask_restful import Resource, reqparse
+from marshmallow import ValidationError, EXCLUDE
 from werkzeug.security import safe_str_cmp
 from flask_jwt_extended import (
     create_access_token,
@@ -8,11 +10,11 @@ from flask_jwt_extended import (
     jwt_required,
     get_raw_jwt,
 )
+
+from schemas.user import UserSchema
 from models.user import UserModel
 from blacklist import BLACKLIST
 
-
-BLANK_ERROR = "{} cannot be left blank!"
 ALREADY_EXISTS = "A user with that username already exists."
 ERROR_CREATING = "An error occurred while creating the store."
 USER_CREATED = "User created successfully."
@@ -21,19 +23,17 @@ USER_DELETED = "Item deleted."
 USER_LOGGED_OUT = "User <id={}> successfully logged out."
 INVALID_CREDENTIALS = "Invalid Credentials!"
 
-_user_parser = reqparse.RequestParser()
-_user_parser.add_argument(
-    "username", type=str, required=True, help=BLANK_ERROR.format("username")
-)
-_user_parser.add_argument(
-    "password", type=str, required=True, help=BLANK_ERROR.format("password")
-)
+user_schema = UserSchema(unknown=EXCLUDE)
 
 
 class UserRegister(Resource):
     @classmethod
     def post(cls):
-        data = _user_parser.parse_args()
+        try:
+            json = request.get_json()
+            data = user_schema.load(json)
+        except ValidationError as err:
+            return err.messages, 400
 
         if UserModel.find_by_username(data["username"]):
             return {"message": ALREADY_EXISTS}, 400
@@ -54,8 +54,8 @@ class User(Resource):
     def get(cls, user_id: int):
         user = UserModel.find_by_id(user_id)
         if not user:
-            return {"message": "User not found."}, 404
-        return user.json(), 200
+            return {"message": USER_NOT_FOUND}, 404
+        return user_schema.dump(user), 200
 
     @classmethod
     def delete(cls, user_id: int):
@@ -69,7 +69,11 @@ class User(Resource):
 class UserLogin(Resource):
     @classmethod
     def post(cls):
-        data = _user_parser.parse_args()
+        try:
+            json = request.get_json()
+            data = user_schema.load(json)
+        except ValidationError as err:
+            return err.messages, 400
 
         user = UserModel.find_by_username(data["username"])
 
