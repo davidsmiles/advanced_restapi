@@ -3,12 +3,9 @@ from typing import List
 from db import db
 
 from flask import request, url_for
-from requests import Request, post
+from requests import Request
 
-MAILGUN_DOMAIN = "sandbox5bf2b915fd6d4873b6ce4f765558f0a4.mailgun.org"
-MAILGUN_API_KEY = "b58aa70ad5ce95e80536d44a8225a14b-9c988ee3-3e87ce1c"
-FROM_TITLE = "Stores REST API"
-FROM_EMAIL = "ugberodavid@gmail.com"
+from libs.mailgun import Mailgun
 
 
 class UserModel(db.Model):
@@ -35,16 +32,10 @@ class UserModel(db.Model):
     def send_confirmation_email(self) -> Request:
         link = request.url_root[0:-1] + url_for("userconfirm", user_id=self.id)
 
-        return post(
-            f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
-            auth=("api", MAILGUN_API_KEY),
-            data={
-                "from": f"{FROM_TITLE} {FROM_EMAIL}",
-                "to": self.email,
-                "subject": "Registration confirmation",
-                "text": f"Please click the link to confirm your registration: {link}"
-            },
-        )
+        subject = "Registration confirmation"
+        text = f"Please click the link to confirm your registration: {link}"
+
+        return Mailgun.send_email([self.email], subject, text)
 
     def save_to_db(self) -> None:
         db.session.add(self)
