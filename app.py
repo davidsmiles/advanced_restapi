@@ -2,8 +2,12 @@ from flask import Flask, jsonify
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
 
+from ma import ma
 from db import db
 from blacklist import BLACKLIST
+
+from resources.store import Store, StoreList
+from resources.item import Item, ItemList
 from resources.user import UserRegister, UserLogin, User, TokenRefresh, UserLogout
 
 app = Flask(__name__)
@@ -35,6 +39,10 @@ def check_if_token_in_blacklist(decrypted_token):
     )  # Here we blacklist particular JWTs that have been created in the past.
 
 
+api.add_resource(Item, "/item/<string:name>")
+api.add_resource(ItemList, "/items")
+api.add_resource(Store, "/store/<string:name>")
+api.add_resource(StoreList, "/stores")
 api.add_resource(UserRegister, "/register")
 api.add_resource(User, "/user/<int:user_id>")
 api.add_resource(UserLogin, "/login")
@@ -43,4 +51,5 @@ api.add_resource(UserLogout, "/logout")
 
 if __name__ == "__main__":
     db.init_app(app)
+    ma.init_app(app)
     app.run(port=5000, debug=True)

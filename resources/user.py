@@ -19,7 +19,7 @@ ALREADY_EXISTS = "A user with that username already exists."
 ERROR_CREATING = "An error occurred while creating the store."
 USER_CREATED = "User created successfully."
 USER_NOT_FOUND = "User not found"
-USER_DELETED = "Item deleted."
+USER_DELETED = "User deleted."
 USER_LOGGED_OUT = "User <id={}> successfully logged out."
 INVALID_CREDENTIALS = "Invalid Credentials!"
 
@@ -31,14 +31,13 @@ class UserRegister(Resource):
     def post(cls):
         try:
             json = request.get_json()
-            data = user_schema.load(json)
+            user = user_schema.load(json)
         except ValidationError as err:
             return err.messages, 400
 
-        if UserModel.find_by_username(data["username"]):
+        if UserModel.find_by_username(user.username):
             return {"message": ALREADY_EXISTS}, 400
 
-        user = UserModel(**data)
         user.save_to_db()
 
         return {"message": USER_CREATED}, 201
@@ -75,10 +74,10 @@ class UserLogin(Resource):
         except ValidationError as err:
             return err.messages, 400
 
-        user = UserModel.find_by_username(data["username"])
+        user = UserModel.find_by_username(data.username)
 
         # this is what the `authenticate()` function did in security.py
-        if user and safe_str_cmp(user.password, data["password"]):
+        if user and safe_str_cmp(user.password, data.password):
             # identity= is what the identity() function did in security.py—now stored in the JWT
             access_token = create_access_token(identity=user.id, fresh=True)
             refresh_token = create_refresh_token(user.id)
