@@ -1,3 +1,5 @@
+import traceback
+
 from flask import request, jsonify, make_response, render_template
 from flask_restful import Resource, reqparse
 from marshmallow import ValidationError, EXCLUDE
@@ -16,14 +18,18 @@ from models.user import UserModel
 from blacklist import BLACKLIST
 
 ALREADY_EXISTS = "A user with that username already exists."
+EMAIL_ALREADY_EXISTS = "A user with that email already exists."
 ERROR_CREATING = "An error occurred while creating the store."
-USER_CREATED = "User created successfully."
+USER_CREATED = "Account created successfully, an email with activation link has been sent to your email address, please cheeck."
 USER_NOT_FOUND = "User not found"
 USER_DELETED = "User deleted."
 USER_LOGGED_OUT = "User <id={}> successfully logged out."
 INVALID_CREDENTIALS = "Invalid Credentials!"
-USER_CONFIRMED_ERROR = "You have not confirmed registration. Please check your email <{}>"
+USER_CONFIRMED_ERROR = (
+    "You have not confirmed registration. Please check your email <{}>"
+)
 USER_ACTIVATED = "User {} has been activated."
+FAILED_TO_CREATE = "Internal Server Error. Failed to create User"
 
 user_schema = UserSchema(unknown=EXCLUDE)
 
@@ -37,9 +43,16 @@ class UserRegister(Resource):
         if UserModel.find_by_username(user.username):
             return {"message": ALREADY_EXISTS}, 400
 
-        user.save_to_db()
+        if UserModel.find_by_email(user.email):
+            return {"message": EMAIL_ALREADY_EXISTS}, 400
 
-        return {"message": USER_CREATED}, 201
+        try:
+            user.save_to_db()
+            user.send_confirmation_email()
+            return {"message": USER_CREATED}, 201
+        except:
+            traceback.print_exc()
+            return {"message": FAILED_TO_CREATE}, 500
 
 
 class User(Resource):
@@ -68,7 +81,7 @@ class UserLogin(Resource):
     @classmethod
     def post(cls):
         json = request.get_json()
-        data = user_schema.load(json)
+        data = user_schema.load(json, partial=("email",))
 
         user = UserModel.find_by_username(data.username)
 
@@ -78,7 +91,10 @@ class UserLogin(Resource):
                 # identity= is what the identity() function did in security.py—now stored in the JWT
                 access_token = create_access_token(identity=user.id, fresh=True)
                 refresh_token = create_refresh_token(user.id)
-                return {"access_token": access_token, "refresh_token": refresh_token}, 200
+                return (
+                    {"access_token": access_token, "refresh_token": refresh_token},
+                    200,
+                )
             return {"message": USER_CONFIRMED_ERROR.format(user.username)}, 400
 
         return {"message": INVALID_CREDENTIALS}, 401
@@ -113,5 +129,6 @@ class UserConfirm(Resource):
         user.activated = True
         user.save_to_db()
         headers = {"Content-Type": "text/html"}
-        return make_response(render_template("confirmation_page.html", email=user.username), 200, headers)
-
+        return make_response(
+            render_template("confirmation_page.html", email=user.username), 200, headers
+        )
