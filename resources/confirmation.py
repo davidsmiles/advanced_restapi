@@ -1,3 +1,4 @@
+import traceback
 from time import time
 
 from flask import make_response, render_template
@@ -5,11 +6,14 @@ from flask_restful import Resource
 
 from models.confirmation import ConfirmationModel
 from models.user import UserModel
+from resources.user import USER_NOT_FOUND
 from schemas.confirmation import ConfirmationSchema
 
 NOT_FOUND = "Confirmation reference not found"
 EXPIRED = "The link has expired"
 ALREADY_CONFIRMED = "Registration has already been confirmed"
+RESEND_SUCCESSFUL = "E-mail confirmation successfully resent."
+RESEND_FAIL = "There was a problem resending the email. Please try again."
 
 
 class Confirmation(Resource):
@@ -52,6 +56,24 @@ class ConfirmationByUser(Resource):
             }
 
     @classmethod
-    def post(cls):
+    def post(cls, user_id: int):
         """post to resend the confirmation email"""
-        pass
+        user = UserModel.find_by_id(user_id)
+        if not user:
+            return {"message": USER_NOT_FOUND}, 404
+        try:
+            confirmation = user.most_recent_confirmation
+            if confirmation:    # confirmation exists
+                if confirmation.confirmed:  # already confirmed
+                    return {"message": ALREADY_CONFIRMED}
+                confirmation.force_to_expire()
+
+            new_confirmation = ConfirmationModel(user_id)
+            new_confirmation.save_to_db()
+
+            # user.send_confirmation_email()
+
+            return {"message": RESEND_SUCCESSFUL}
+        except:
+            traceback.print_exc()
+            return {"message": RESEND_FAIL}
