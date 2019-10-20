@@ -16,9 +16,9 @@ from resources.user import (
     UserLogin,
     User,
     TokenRefresh,
-    UserLogout,
-    UserConfirm,
+    UserLogout
 )
+from resources.confirmation import Confirmation, ConfirmationByUser
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
@@ -63,7 +63,8 @@ api.add_resource(User, "/user/<int:user_id>")
 api.add_resource(UserLogin, "/login")
 api.add_resource(TokenRefresh, "/refresh")
 api.add_resource(UserLogout, "/logout")
-api.add_resource(UserConfirm, "/userconfirm/<int:user_id>")
+api.add_resource(Confirmation, "/confirmation/<string:confirmation_id>")
+api.add_resource(ConfirmationByUser, "/confirmation/user/<int:user_id>")
 
 if __name__ == "__main__":
     db.init_app(app)
