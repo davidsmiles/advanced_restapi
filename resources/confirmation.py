@@ -4,16 +4,11 @@ from time import time
 from flask import make_response, render_template
 from flask_restful import Resource
 
+from libs.strings import gettext
+
 from models.confirmation import ConfirmationModel
 from models.user import UserModel
-from resources.user import USER_NOT_FOUND
 from schemas.confirmation import ConfirmationSchema
-
-NOT_FOUND = "Confirmation reference not found"
-EXPIRED = "The link has expired"
-ALREADY_CONFIRMED = "Registration has already been confirmed"
-RESEND_SUCCESSFUL = "E-mail confirmation successfully resent."
-RESEND_FAIL = "There was a problem resending the email. Please try again."
 
 
 class Confirmation(Resource):
@@ -21,13 +16,13 @@ class Confirmation(Resource):
     def get(cls, confirmation_id: str):
         confirmation = ConfirmationModel.find_by_id(confirmation_id)
         if not confirmation:        # does not exist
-            return {"message": NOT_FOUND}, 404
+            return {"message": gettext('confirmation_not_found')}, 404
 
         if confirmation.expired:    # has expired
-            return {"message": EXPIRED}
+            return {"message": gettext('confirmation_link_expired')}
 
         if confirmation.confirmed:  # is confirmed
-            return {"message": ALREADY_CONFIRMED}
+            return {"message": gettext('confirmation_already_confirmed')}
 
         confirmation.confirmed = True
         confirmation.save_to_db()
@@ -60,12 +55,12 @@ class ConfirmationByUser(Resource):
         """post to resend the confirmation email"""
         user = UserModel.find_by_id(user_id)
         if not user:
-            return {"message": USER_NOT_FOUND}, 404
+            return {"message": gettext('user_not_found')}, 404
         try:
             confirmation = user.most_recent_confirmation
             if confirmation:    # confirmation exists
                 if confirmation.confirmed:  # already confirmed
-                    return {"message": ALREADY_CONFIRMED}
+                    return {"message": gettext('confirmation_already_confirmed')}
                 confirmation.force_to_expire()
 
             new_confirmation = ConfirmationModel(user_id)
@@ -73,7 +68,7 @@ class ConfirmationByUser(Resource):
 
             # user.send_confirmation_email()
 
-            return {"message": RESEND_SUCCESSFUL}
+            return {"message": gettext('confirmation_resend_successful')}
         except:
             traceback.print_exc()
-            return {"message": RESEND_FAIL}
+            return {"message": gettext('confirmation_resend_fail')},12222222
